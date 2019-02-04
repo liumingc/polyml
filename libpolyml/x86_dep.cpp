@@ -1449,7 +1449,13 @@ void X86Module::GarbageCollect(ScanAddress *process)
 #ifdef POLYML32IN64
     // These are trampolines in the code area rather than direct calls.
     if (popArgAndClosure != 0)
+    {
+        MemSpace *space = gMem.SpaceForAddress(popArgAndClosure);
+        ASSERT(space != 0);
         process->ScanRuntimeAddress((PolyObject**)&popArgAndClosure, ScanAddress::STRENGTH_STRONG);
+        MemSpace *spaceAfter = gMem.SpaceForAddress(popArgAndClosure);
+        ASSERT(spaceAfter != 0);
+    }
     if (killSelf != 0)
         process->ScanRuntimeAddress((PolyObject**)&killSelf, ScanAddress::STRENGTH_STRONG);
     if (raiseException != 0)
