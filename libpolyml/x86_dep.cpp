@@ -342,7 +342,7 @@ extern "C" {
 };
 
 // Pointers to assembly code or trampolines to assembly code.
-static byte *popArgAndClosure, *killSelf, *raiseException, *callbackException, *callbackReturn;
+byte *popArgAndClosure, *killSelf, *raiseException, *callbackException, *callbackReturn;
 
 X86TaskData::X86TaskData(): allocReg(0), allocWords(0), saveRegisterMask(0)
 {

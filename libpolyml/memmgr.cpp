@@ -874,6 +874,9 @@ void MemMgr::RemoveEmptyCodeAreas()
         PolyObject *start = (PolyObject *)(space->bottom+1);
         if (start->IsByteObject() && start->Length() == space->spaceSize()-1)
         {
+            extern byte *popArgAndClosure;
+            MemSpace *pasSpace = SpaceForAddress(popArgAndClosure);
+            ASSERT(space != pasSpace);
             if (debugOptions & DEBUG_MEMMGR)
                 Log("MMGR: Deleted code space %p at %p size %zu\n", space, space->bottom, space->spaceSize());
             // We have an empty cell that fills the whole space.
