@@ -319,10 +319,13 @@ struct
         |   Indirect {base, offset, indKind} =>
                 PrettyBlock(2, false, [],
                     [
+                        string "ind{",
+                        PrettyBreak(0, 0),
                         pretty base,
                         PrettyBreak(0, 2),
                         string(concat["[", Int.toString offset, "]",
-                            case indKind of IndTuple => "" | IndVariant => "(*V*)" | IndContainer => "(*C*)"])
+                            case indKind of IndTuple => "" | IndVariant => "(*V*)" | IndContainer => "(*C*)"]),
+                        string "}"
                     ]
                 )
         

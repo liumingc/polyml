@@ -119,6 +119,7 @@ struct
             PReg regNo
         end
         
+        (* The difference between newPReg & newUReg is in consing the pregPropList *)
         and newUReg() =
         let
             val regNo = !pregCounter before pregCounter := !pregCounter + 1
@@ -164,6 +165,9 @@ struct
         local
             open BuiltIns
         in
+            (* testAsBranch (op, signed, asOp) 
+                if asOp is false, then use inverse of op.
+            *)
             fun testAsBranch(TestEqual,         _,      true)       = JE
             |   testAsBranch(TestEqual,         _,      false)      = JNE
                 (* Signed tests *)

@@ -215,6 +215,7 @@ struct
     end
 
     (* Turn a list of fields to use into a filter for SetContainer. *)
+    (* filter is a bool array *)
     fun fieldsToFilter useList =
     let
         val maxDest = List.foldl Int.max ~1 useList
@@ -227,11 +228,14 @@ struct
     and filterToFields filter =
         BoolVector.foldri (fn (i, true, l) => i :: l | (_, _, l) => l) [] filter
 
-    and setInFilter filter = BoolVector.foldl (fn (true, n) => n+1 | (false, n) => n) 0 filter
+    and
+        (* countTrueInFilter *)
+        setInFilter filter = BoolVector.foldl (fn (true, n) => n+1 | (false, n) => n) 0 filter
 
     (* Work-around for bug in bytevector equality. *)
     and boolVectorEq(a, b) = filterToFields a = filterToFields b
  
+    (* what does it do? *)
     fun buildFullTuple(filter, select) =
     let
         fun extArg(t, u) =
@@ -327,6 +331,7 @@ struct
                            to the closure or passed to the inner function. *)
                         val argN = LoadArgument nArg
                     in
+                        (* modVec[nArg] = true if not modified else false *)
                         if Vector.sub(modVec, nArg)
                         then getArgs(rest, nArg+1, clCount+1, argCount,
                                     argN :: stable, change, LoadClosure clCount :: mapList)
@@ -1489,8 +1494,13 @@ struct
                 val printCodeTree      = DEBUG.getParameter DEBUG.codetreeTag debugSwitches
                 and compilerOut        = PRETTY.getCompilerOutput debugSwitches
                 val simpCode = SIMPLIFIER.specialToGeneral simpCode
-                val () = if printCodeTree then compilerOut(PRETTY.PrettyString "Output of simplifier") else ()
-                val () = if printCodeTree then compilerOut (BASECODETREE.pretty simpCode) else ()
+                val () = if printCodeTree
+                then
+                	(
+                		compilerOut(PRETTY.PrettyString "Output of simplifier");
+                		compilerOut (BASECODETREE.pretty simpCode)
+                	)
+                else ()
                 val preOptCode =
                     REMOVE_REDUNDANT.cleanProc(simpCode, [UseExport], topLevel, simpCount)
                 (* Print the code with the use information before it goes into the optimiser. *)

@@ -178,6 +178,7 @@ struct
 
     end (* patSet *);
 
+    (* aot is short for And-Or-Tree *)
     datatype aot = 
         Aot of 
         { 
