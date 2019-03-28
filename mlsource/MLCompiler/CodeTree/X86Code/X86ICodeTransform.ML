@@ -188,6 +188,20 @@ struct
         in
             Vector.appi printRegAlloc regAlloc
         end
+
+        fun printMessage(s) =
+        let
+            val strm = PRETTY.getSimplePrinter(debugSwitches, icodeTabs)
+        in
+            strm s
+        end
+
+        fun printInt n =
+        let
+            val strm = PRETTY.getSimplePrinter(debugSwitches, icodeTabs)
+        in
+            strm (Int.toString n ^ "\n")
+        end
         
         (* Limit the number of passes. *)
         val maxOptimisePasses = 30
@@ -199,10 +213,27 @@ struct
             val _ = passes < maxTotalPasses orelse raise InternalError "Too many passes"
             val () =
                 if wantPrintCode
-                then printCode basicBlocks
+                then
+                (
+                    printMessage ("@inf begin processCode, passes=" ^ Int.toString passes ^
+                        ", optPasses=" ^ Int.toString optPasses ^ "\n");
+                    printCode basicBlocks
+                )
                 else ()
             (* First pass - identify register use patterns *)
             val (identified, regStates) = identifyRegisters(basicBlocks, pregProps)
+
+            fun mapFromExtended(ExtendedBasicBlock{block, flow, ...}) =
+                BasicBlock{block=List.map #instr block, flow=flow}
+
+            val _ =
+                if wantPrintCode
+                then (
+                    printMessage "@inf after ident\n";
+                    printCode (Vector.map mapFromExtended identified);
+                    printMessage "@inf before opt\n"
+                )
+                else ()
             (* Try optimising.  This may not do anything in which case we can continue with
                the original code otherwise we need to reprocess. *)
             val tryOpt =
@@ -230,6 +261,13 @@ struct
                             addRegisterPushes{code=identified, pushVec=regsToSpill, pregProps=pregProps, firstPass=passes=0}
                     in
                         (* And reprocess. *)
+                        if wantPrintCode
+                        then
+                        (
+                            printMessage "@inf need Phase2\n";
+                            printCode postPushCode
+                        )
+                        else ();
                         processCode(postPushCode, regPropsPhase2, maxStackPhase2, passes+1, optPasses)
                     end
                     else
@@ -284,26 +322,35 @@ struct
                 
                         (* Now get the conflict sets. *)
                         val conflictSets = getConflictStates(identified, maxPRegs)
-                        local
-                            fun mapFromExtended(ExtendedBasicBlock{block, flow, ...}) =
-                                BasicBlock{block=List.map #instr block, flow=flow}
-                        in
-                            val () =
-                                if wantPrintCode
-                                then (printCode(Vector.map mapFromExtended identified); printConflicts conflictSets)
-                                else ()
-                        end
+                        val () =
+                            if wantPrintCode
+                            then (printCode(Vector.map mapFromExtended identified); printConflicts conflictSets)
+                            else ()
                     in
                         case allocateRegisters {blocks=identified, regStates=conflictSets, regProps=pregProps } of
                             AllocateSuccess allocatedRegs =>
                                 (
-                                    if wantPrintCode then printRegisters allocatedRegs else ();
+                                    if wantPrintCode
+                                    then
+                                    (
+                                        printMessage "allocateRegisters success\n";
+                                        printRegisters allocatedRegs
+                                    )
+                                    else ();
                                     icodeToX86Code{blocks=identified, functionName=functionName, allocatedRegisters=allocatedRegs,
                                                stackRequired=maxStack, debugSwitches=debugSwitches, resultClosure=resultClosure}
                                 )
                        |    AllocateFailure fails =>
                             let
                                 val regsToSpill = spillFromConflictSets fails
+                                val _ =
+                                    if wantPrintCode
+                                    then
+                                    (
+                                        printMessage "allocateRegisters failed\n";
+                                        Vector.appi (fn (i, reg) => printMessage ("[" ^ Int.toString i ^ "]=" ^ Bool.toString reg)) regsToSpill
+                                    )
+                                    else ()
                                 val {code=postPushCode, pregProps=pregPropsPhase2, maxStack=maxStackPhase2} =
                                     addRegisterPushes{code=identified, pushVec=regsToSpill, pregProps=pregProps, firstPass=false}
                             in
