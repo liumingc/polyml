@@ -75,21 +75,22 @@ struct
         in
             fun nowActive regs = List.foldl addToActive [] regs
         end
-            fun getBlockSets(ExtendedBasicBlock{block, passThrough, ...}, sets) =
-            let
-                fun getSets({active, ...}, l) =
-                let
-                    val set = nowActive(setToList(union(active, passThrough)))
-                in
-                    if List.length set > nGenRegs
-                    then set :: l
-                    else l
-                end
-            in
-                List.foldl getSets sets block
-            end
 
-            val activeSets = Vector.foldl getBlockSets [] identified
+        fun getBlockSets(ExtendedBasicBlock{block, passThrough, ...}, sets) =
+        let
+            fun getSets({active, ...}, l) =
+            let
+                val set = nowActive(setToList(union(active, passThrough)))
+            in
+                if List.length set > nGenRegs
+                then set :: l
+                else l
+            end
+        in
+            List.foldl getSets sets block
+        end
+
+        val activeSets = Vector.foldl getBlockSets [] identified
 
     in
         if null activeSets then ()
@@ -215,6 +216,22 @@ struct
                 if wantPrintCode
                 then
                 (
+                    (*
+                    if passes = 0 andalso optPasses = 0
+                    then
+                    (
+                        let
+                            val target = 
+                                case targetArch of
+                                  Native32Bit => "native32"
+                                | Native64Bit => "native64"
+                                | ObjectId32Bit => "obj32"
+                        in
+                            printMessage ("target is " ^ target ^ "\n")
+                        end
+                    )
+                    else ();
+                    *)
                     printMessage ("@inf begin processCode, passes=" ^ Int.toString passes ^
                         ", optPasses=" ^ Int.toString optPasses ^ "\n");
                     printCode basicBlocks
