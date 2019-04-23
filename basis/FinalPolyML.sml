@@ -792,6 +792,7 @@ local
             val fileName  = object ^ suffix
             val fileTuple = (directory, fileName)
         in
+            print ("+try find file=" ^ fileName ^ " in dir=" ^ directory ^ "\n");
             if fileReadable fileTuple
             then SOME fileTuple
             else findFileTuple (directory, object) suffixes
@@ -913,7 +914,11 @@ local
                     (* If the object is a directory the source is in the bind file. *)
                     val (dir : string, file : string) =
                         if objIsDir
-                        then (here,"ml_bind")
+                        then
+                        (
+                            print (here ^ " is dir, try ml_bind");
+                            (here,"ml_bind")
+                        )
                         else (directory, objName);
                 in
                     case filePresent (dir, kind, file) of

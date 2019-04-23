@@ -28,6 +28,7 @@ struct
     local
         fun addItem(i, []) = [i]
         |   addItem(i, hd::tl) =
+            (* why not use `lst as hd::tl`, to reduce constructing new values? *)
                 if i = hd then hd :: tl
                 else if i < hd then i :: hd :: tl
                 else hd :: addItem(i, tl)

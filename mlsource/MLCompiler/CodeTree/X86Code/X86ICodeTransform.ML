@@ -106,6 +106,7 @@ struct
                 (* We may have already marked some of these to push. *)
                 val currentActive = nowActive activeSet
                 val regCount = List.length currentActive
+                (* addCosts: regNo * freq * active/refs *)
                 fun addCosts r =
                 let
                     val {active, refs, prop, ...} = Vector.sub(regStates, r)
@@ -234,6 +235,25 @@ struct
                     *)
                     printMessage ("@inf begin processCode, passes=" ^ Int.toString passes ^
                         ", optPasses=" ^ Int.toString optPasses ^ "\n");
+                    let
+                        fun propRepr (prop, res) =
+                        let
+                            val propX =
+                            case prop of
+                                RegPropGeneral => "GenReg"
+                            |	RegPropUntagged => "Untag"
+                            |	RegPropStack i => "Stack[" ^ Int.toString i ^ "]"
+                            |	RegPropCacheTagged => "CacheTag"
+                            |	RegPropMultiple => "Mult"
+                        in
+                            res ^ ", " ^ propX
+                        end
+
+                        val res = Vector.foldl propRepr "" pregProps
+                    in
+                        printMessage (res ^ "\n")
+                    end;
+					printMessage "blks:\n";
                     printCode basicBlocks
                 )
                 else ()
@@ -245,7 +265,8 @@ struct
 
             val _ =
                 if wantPrintCode
-                then (
+                then
+                (
                     printMessage "@inf after ident\n";
                     printCode (Vector.map mapFromExtended identified);
                     printMessage "@inf before opt\n"

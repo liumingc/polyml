@@ -207,6 +207,7 @@ struct
 
             val () = setReferences 0
         in
+            (* blockRefs contains the predecessor blocks *)
             val blockRefs = blockRefs
         end
 
@@ -434,6 +435,7 @@ struct
                         |   _ => raise InternalError "mapDestContainer: already set"
                     )
 
+                    (* source -> sourceval * codePre * codePost *)
                     fun mapSourceEx(RegisterArgument(PReg r), _) =
                         (
                             case Array.sub(pregMap, r) of

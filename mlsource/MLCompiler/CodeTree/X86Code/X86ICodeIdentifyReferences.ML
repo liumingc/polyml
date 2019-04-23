@@ -19,6 +19,7 @@ functor X86ICodeIdentifyReferences(
     structure ICODE: ICodeSig
     structure DEBUG: DEBUGSIG
     structure INTSET: INTSETSIG
+    structure PRETTY: PRETTYSIG
 ): X86IDENTIFYREFSSIG =
 struct
     open ICODE
@@ -27,11 +28,6 @@ struct
     type regState =
     { 
         active: int, refs: int, pushState: bool, prop: regProperty
-    }
-
-    and conflictState =
-    {
-        conflicts: int list, realConflicts: reg list
     }
 
     (* CC states before and after.  The instruction may use the CC or ignore it. The only
@@ -96,6 +92,7 @@ struct
     |   getInstructionState(BeginFunction {regArgs, stackArgs, ...}) =
             { sources=[], dests=map #1 regArgs, sStacks=[], dStacks=stackArgs, ccIn=CCUnused, ccOut=CCIndeterminate }
 
+    (* The difference between FunctionCall and TailRecursiveCall is the dests, one is dest=[dest], one ins dest=[workReg] *)
     |   getInstructionState(FunctionCall{regArgs, stackArgs, dest, ...}) =
         let
             (* Non-tail-recursive.  Behaves as a normal reference to sources. *)
@@ -750,6 +747,8 @@ struct
                         end
                     in
                         val () =
+                            (* So it's caller-save, in function definition, you
+                            * can think that all registers are free to use? *)
                             case instr of
                                 FunctionCall{ stackArgs=[], callKind=ConstantCode m, ...} =>
                                 if (String.isSubstring "Arbitrary\"" (Address.stringOfWord m))

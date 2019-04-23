@@ -47,6 +47,7 @@ local
             structure DEBUG         = Debug
             structure ICODE         = X86ICode
             structure INTSET        = IntSet
+            structure PRETTY        = Pretty
         )
 
     structure X86ICodeConflicts =

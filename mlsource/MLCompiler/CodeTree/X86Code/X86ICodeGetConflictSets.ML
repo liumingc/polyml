@@ -39,6 +39,8 @@ struct
        was split off. *)
     fun getConflictStates (blocks: extendedBasicBlock vector, maxPRegs) =
     let
+        (* What's the difference between regConflicts and regRealConflicts? I
+        * mean the different purpose *)
         (* Other registers that conflict with this i.e. cannot share the same
            real register. *)
         val regConflicts = Array.array(maxPRegs, emptySet)
@@ -46,7 +48,25 @@ struct
            an instruction e.g. shift or block move, that requires these. *)
         and regRealConflicts = Array.array(maxPRegs, []: reg list)
  
+        (* addTo: int list, conflicts: 'b set *)
         fun addConflictsTo(addTo, conflicts) =
+            (* 
+                If in python, one would write as:
+                ```py
+                for aReg in addTo:
+                    regConflicts[aReg] |= conflicts
+                ```
+                I think python's code is more readable.
+                Why it's more readable? because addTo and aReg is closer binding on top,
+                and regConflicts appears only once. And now conflicts is less confusing, because it's on the rhs.
+                Syntatic sugar makes writing code more happier.
+                ```julia
+                for aReg in addTo
+                    union!(regConflicts[aReg], conflicts)
+                end
+                ```
+                This is also very readable.
+             *)
             List.app(fn aReg => Array.update(regConflicts, aReg, union(Array.sub(regConflicts, aReg), conflicts))) addTo
 
         (* To reserve a register we need to add the real register to the
@@ -54,6 +74,20 @@ struct
         local
             fun isInset reg set = List.exists (fn r => r = reg) set
         in
+            (*
+            # Another example of python's code is simpler and more concise, more
+            # readable
+            def reserveRegister (resLst, xreg):
+              for res in resLst:
+                conflicts = regConflicts[res]
+                for cfl in conflicts:
+                  if cfl not in resList:
+                    cfl.realConflicts.add(xreg)
+
+            Note: xreg is dedicate for resLst. So, any other register, other
+            than resLst, is conflicting with xreg, so xreg can be use for
+            resLst.
+            *)
             fun reserveRegister(reserveFor, reg) =
             let
                 fun reserveAReg r =
@@ -68,6 +102,28 @@ struct
                 List.app reserveAReg reserveFor
             end
         
+            (*
+            def addRealConflicts (i, reg):
+              curr = regRealConflicts[i]
+              if reg not in curr:
+                regRealConflicts[i].append(reg)
+
+            or, in julia,
+
+            function addRealConflicts (i, reg) =
+              curr = regRealConflicts[i]
+              if reg not in curr
+                merge!(regRealConflicts[i], [reg])
+              end
+            end
+
+            sorry, i forget how to write
+            julia's code T_T, so here's may have some error.
+            julia's code like similar to python's, but, with many ends. and
+            there is less syntax sugar, there is merge!, and merge is kindof
+            verbose.
+              
+            *)
             and addRealConflict (i, reg) =
             let
                 val currentConflicts = Array.sub(regRealConflicts, i)
@@ -94,6 +150,7 @@ struct
                    which can only store the size or the contents after the memory has
                    been allocated.  We also have to make sure that the test and
                    work registers are different in IndexedCase. *)
+                (* postInstruction is a list of dest reg no *)
                 val postInstruction =
                     case instr of
                         AllocateMemoryVariable _ => destRegNos @ sourceRegNos
@@ -122,6 +179,11 @@ struct
                 (* Mark conflicts for the destinations, i.e. after the instruction.
                    The destinations conflict with the registers that are used
                    subsequently. *)
+                (* So it means that:
+                *       vreg = ...
+                *       # vreg is conflicted with current + passThruough after
+                *       # this instruction
+                *)
                 val () = addConflictsTo(postInstruction, current);
                 val () = addConflictsTo(postInstruction, passThrough);
 
@@ -132,7 +194,7 @@ struct
                 val () = addConflictsTo(sourceRegNos, listToSet sourceRegNos)
                 val () = addConflictsTo(sourceRegNos, afterRemoveDests);
                 val () = addConflictsTo(sourceRegNos, passThrough)
-            end
+            end (* end of local-in, middle of conflictsForInstr *)
             
             (* I'm not sure if this is needed.  There was a check in the old code to ensure that
                different registers were used for loop variables even if they were actually unused.
@@ -173,6 +235,7 @@ struct
                     (
                         (* Shift with by amount specified in a register.  This must be ecx. *)
                         reserveRegister([regNo shiftAmount], GenReg ecx);
+
                         (* reserveRegister only sets a conflict between the args.  We need
                            to include the result because that will be allocated first. *)
                          List.app(fn r => addRealConflict (r, GenReg ecx)) destRegNos
@@ -184,6 +247,7 @@ struct
                            eax and the remainder is edx.  The divisor must not be in either edx or eax because
                            we need to sign extend the dividend before the division. *)
                         reserveRegister([regNo quotient, regNo dividend], GenReg eax);
+
                         (* In addition, we need to register conflicts with the divisor,
                            at least for edx.  The remainder is a result and may well
                            not be in the conflict set with the divisor. *)
@@ -211,6 +275,7 @@ struct
                         (* This can only put the result in rax. *)
                         reserveRegister([regNo dest], GenReg eax)
 
+                    (* What is packetReg? what is it used for? *)
                 |   RaiseExceptionPacket{ packetReg } =>
                         (* This wasn't needed previously because we always pushed the registers
                            across an exception. *)
@@ -224,6 +289,7 @@ struct
                            than marking them as "must push". *)
                     (
                         reserveRegister([regNo dest], realDest);
+
                         (* The argument registers also conflict.  In order to execute this call we need to load
                            the arguments into specific registers so we can't use them for values that we want after
                            the call.   We use regNo dest here because that will conflict with everything
@@ -238,7 +304,7 @@ struct
                 |   _ => ()
         in
             ()
-        end
+        end (* end of conflictsForInstr *)
         
         (* Process the block. *)
         fun conflictsForBlock(ExtendedBasicBlock{block, passThrough, exports, ...}) =

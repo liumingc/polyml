@@ -307,7 +307,8 @@ struct
                 (* See if there is a friend that has a register already or a
                    hint.  Friends are registers that don't conflict and can
                    possibly avoid an extra move. *) 
-(*                    fun findAFriend([], _) = NONE
+                   (*
+                fun findAFriend([], _) = NONE
                 |   findAFriend(friend :: tail, old) =
                     let
                         val possReg =
@@ -329,6 +330,7 @@ struct
                                 findAFriend(tail @ fOfF, friend :: old)
                             end
                     end*)
+                (* findRegister let ... in *)
             in
                 case tryAReg pref of
                     SOME r => r

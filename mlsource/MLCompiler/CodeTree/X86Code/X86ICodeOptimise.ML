@@ -71,6 +71,8 @@ struct
            or another register replace the value.  Memory locations are only replaced if this is
            the only use.  If there is more than one reference it's better to load it into a
            register and retain the register references.  *)
+        (* How do you know this is the only use? *)
+        (* regMap is [ {dest, source, opSize, ...} ] *)
         fun replaceWithValue(arg as RegisterArgument (preg as PReg pregNo), kill, regMap, instrOpSize) =
         (
             case List.find(fn {dest, ... } => dest = preg) regMap of
